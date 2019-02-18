@@ -16,7 +16,8 @@ from pacman import Directions
 from game import Agent
 from heuristics import *
 import random
-import sys
+
+MAX_VALUE = 100000000
 
 
 class RandomAgent(Agent):
@@ -60,8 +61,40 @@ class BFSAgent(Agent):
 
     # GetAction Function: Called with every frame
     def getAction(self, state):
-        # TODO: write BFS Algorithm instead of returning Directions.STOP
-        return Directions.STOP
+        root = StateNode(state, None, 0)
+        legal = state.getLegalPacmanActions()
+        successors = [(state.generatePacmanSuccessor(action), action) for action in legal
+                      if state.generatePacmanSuccessor(action) is not None]
+        if successors is not None and len(successors) > 0 and not state.isWin():
+            queue = []
+            for successor in successors:
+                node = StateNode(successor[0], successor[1], root.stepCost + 1)
+                queue.append((node, node.action))
+            minCost = MAX_VALUE
+            bestAction = None
+            visited = [root.state]
+            while len(queue) > 0:
+                size = len(queue)
+                for i in range(0, size):
+                    curNode, curAction = queue.pop(0)
+                    curState = curNode.state
+                    if curState not in visited:
+                        legal = curState.getLegalPacmanActions()
+                        successors = [(curState.generatePacmanSuccessor(action), action) for action in legal
+                                      if curState.generatePacmanSuccessor(action) is not None]
+                        if successors is None or len(successors) == 0 or curState.isWin():
+                            if minCost > curNode.stepCost + admissibleHeuristic(curState):
+                                minCost = curNode.stepCost + admissibleHeuristic(curState)
+                                bestAction = curAction
+                        else:
+                            for successor in successors:
+                                if successor[0] is not None and successor[0] not in visited:
+                                    queue.append((StateNode(successor[0], successor[1], curNode.stepCost + 1), curAction))
+                        visited.append(curState)
+            print(minCost)
+            return bestAction
+        else:
+            return Directions.STOP
 
 
 class DFSAgent(Agent):
@@ -71,40 +104,38 @@ class DFSAgent(Agent):
 
     # GetAction Function: Called with every frame
     def getAction(self, state):
-        root = TreeNode(state, None, 0, [])
+        root = StateNode(state, None, 0)
         legal = state.getLegalPacmanActions()
         successors = [(state.generatePacmanSuccessor(action), action) for action in legal
                       if state.generatePacmanSuccessor(action) is not None]
         if successors is not None and len(successors) > 0 and not state.isWin():
+            stack = []
             for successor in successors:
-                if successor[0] is not None:
-                    root.children.append(TreeNode(successor[0], successor[1], root.stepCost + 1, []))
-            min = sys.maxint
+                node = StateNode(successor[0], successor[1], root.stepCost + 1)
+                stack.append((node, node.action))
+            minCost = MAX_VALUE
             bestAction = None
-            for child in root.children:
-                minCost = self.dfs(child, [root.state])
-                if minCost < min:
-                    min = minCost
-                    bestAction = child.action
+            visited = [root.state]
+            while len(stack) > 0:
+                curNode, curAction = stack.pop()
+                curState = curNode.state
+                if curState not in visited:
+                    legal = curState.getLegalPacmanActions()
+                    successors = [(curState.generatePacmanSuccessor(action), action) for action in legal
+                                  if curState.generatePacmanSuccessor(action) is not None]
+                    if successors is None or len(successors) == 0 or curState.isWin():
+                        if minCost > curNode.stepCost + admissibleHeuristic(curState):
+                            minCost = curNode.stepCost + admissibleHeuristic(curState)
+                            bestAction = curAction
+                    else:
+                        for successor in successors:
+                            if successor[0] is not None and successor[0] not in visited:
+                                stack.append((StateNode(successor[0], successor[1], curNode.stepCost + 1), curAction))
+                    visited.append(curState)
+            print(minCost)
             return bestAction
         else:
             return Directions.STOP
-
-    def dfs(self, node, visited):
-        state = node.state
-        legal = state.getLegalPacmanActions()
-        successors = [(state.generatePacmanSuccessor(action), action) for action in legal
-                      if state.generatePacmanSuccessor(action) is not None]
-        for successor in successors:
-            if successor[0] is not None:
-                node.children.append(TreeNode(successor[0], successor[1], node.stepCost + 1, []))
-        if successors is None or len(successors) == 0 or state.isWin():
-            return node.stepCost + admissibleHeuristic(state)
-        minCost = sys.maxint
-        for child in node.children:
-            if child.state not in visited:
-                minCost = min(minCost, self.dfs(child, visited + [child.state]))
-        return minCost
 
 
 class AStarAgent(Agent):
@@ -114,39 +145,103 @@ class AStarAgent(Agent):
 
     # GetAction Function: Called with every frame
     def getAction(self, state):
-        # TODO: write A* Algorithm instead of returning Directions.STOP
-        visitedStates = []
-        heap = PQ()
-        heap.put((admissibleHeuristic(state), state, [], 0))
-        bestScore, curState, actions, totalCost = heap.get()
-        visitedStates.append((state, bestScore))
-        while not curState.isWin():
-            legal = curState.getLegalPacmanActions()
-            successors = [(curState.generatePacmanSuccessor(action), action) for action in legal]
-            for successorState, action in successors:
-                if successorState is None:
-                    print actions
-                    print bestScore
-                    return actions[0]
-                visitedExit = False
-                totalCost = totalCost + scoreEvaluation(successorState)
-                for (vCost, vState) in visitedStates:
-                    if successorState == vState and totalCost >= vCost:
-                        visitedExit = True
-                        break
-                if not visitedExit:
-                    heap.put((totalCost + admissibleHeuristic(successorState), successorState, actions + [action],
-                              totalCost))
-                    visitedStates.append((successorState, totalCost))
-            bestScore, curState, actions, totalCost = heap.get()
+        root = StateNode(state, None, 0)
+        legal = state.getLegalPacmanActions()
+        successors = [(state.generatePacmanSuccessor(action), action) for action in legal
+                      if state.generatePacmanSuccessor(action) is not None]
+        if successors is not None and len(successors) > 0 and not state.isWin():
+            pq = PriorityQueue()
+            for successor in successors:
+                node = StateNode(successor[0], successor[1], root.stepCost + 1)
+                pq.put((node.stepCost + admissibleHeuristic(node.state), node, node.action))
+            minCost = MAX_VALUE
+            bestAction = None
+            visited = [root.state]
+            while pq.size() > 0:
+                _, curNode, curAction = pq.get()
+                curState = curNode.state
+                if curState not in visited:
+                    legal = curState.getLegalPacmanActions()
+                    successors = [(curState.generatePacmanSuccessor(action), action) for action in legal
+                                  if curState.generatePacmanSuccessor(action) is not None]
+                    if successors is None or len(successors) == 0 or curState.isWin():
+                        if minCost > curNode.stepCost + admissibleHeuristic(curState):
+                            minCost = curNode.stepCost + admissibleHeuristic(curState)
+                            bestAction = curAction
+                    else:
+                        for successor in successors:
+                            if successor[0] is not None and successor[0] not in visited:
+                                pq.put((curNode.stepCost + 1 + admissibleHeuristic(successor[0]),
+                                        StateNode(successor[0], successor[1], curNode.stepCost + 1),
+                                        curAction))
+                    visited.append(curState)
+            print minCost
+            return bestAction
+        else:
+            return Directions.STOP
 
-        return actions[0]
 
-
-class TreeNode:
-
-    def __init__(self, state, action, stepCost, children):
+class StateNode:
+    def __init__(self, state, action, stepCost):
         self.state = state
         self.action = action
         self.stepCost = stepCost
-        self.children = children
+
+
+# input (totalCost, node, action)
+class PriorityQueue(object):
+    def __init__(self):
+        self.data_list = []
+
+    def size(self):
+        return len(self.data_list) - 1
+
+    def left_child(self, root):
+        return (root + 1) * 2 - 1
+
+    def right_child(self, root):
+        return (root + 1) * 2 + 1 - 1
+
+    def father(self, node):
+        return (node + 1) / 2 - 1
+
+    def heapify(self, root):
+        if root > self.size():
+            return
+        left_node = self.left_child(root)
+        right_node = self.right_child(root)
+        smallest = root
+        if left_node <= self.size():
+            if self.data_list[left_node][0] < self.data_list[smallest][0]:
+               smallest = left_node
+
+        if right_node <= self.size():
+            if self.data_list[right_node][0] < self.data_list[smallest][0]:
+               smallest = right_node
+
+        if smallest != root:
+            self.data_list[root], self.data_list[smallest] = self.data_list[smallest], self.data_list[root]
+            self.heapify(smallest)
+
+    def build_heap(self):
+        for i in range(self.size()/2, 0, -1):
+            self.heapify(i)
+
+    def get(self):
+        if self.size() == 0:
+            return None
+        ret = self.data_list[0]
+        self.data_list[0] = self.data_list[-1]
+        del self.data_list[-1]
+        self.heapify(0)
+        return ret
+
+    def put(self, data):
+        self.data_list.append(data)
+        now_index = self.size()
+        pre = self.father(now_index)
+        while self.data_list[pre][0] > data[0] and now_index != 1:
+            self.data_list[pre], self.data_list[now_index] = self.data_list[now_index], self.data_list[pre]
+            now_index = pre
+            pre = now_index / 2
+
