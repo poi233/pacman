@@ -146,12 +146,6 @@ class AStarAgent(Agent):
                 visited.append(curState)
         return bestAction
 
-    def allNone(self, successors):
-        for successor in successors:
-            if successor[0] is not None:
-                return False
-        return True
-
 class StateNode:
     def __init__(self, state, stepCost):
         self.state = state
