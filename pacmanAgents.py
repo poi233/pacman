@@ -64,24 +64,21 @@ class BFSAgent(Agent):
         queue = [(root, None)]
         minCost = MAX_VALUE
         bestAction = Directions.STOP
-        visited = []
         while len(queue) > 0:
             size = len(queue)
             for i in range(0, size):
                 curNode, curAction = queue.pop(0)
                 curState = curNode.state
-                if curState not in visited:
-                    if curNode != root and minCost > curNode.stepCost + admissibleHeuristic(curState):
-                        minCost = curNode.stepCost + admissibleHeuristic(curState)
-                        bestAction = curAction
-                    if not curState.isWin() and not curState.isLose():
-                        legal = curState.getLegalPacmanActions()
-                        successors = [(curState.generatePacmanSuccessor(action), action) for action in legal]
-                        for successor in successors:
-                            if successor[0] is not None and successor[0] not in visited:
-                                queue.append((StateNode(successor[0], curNode.stepCost + 1),
-                                              curAction if curAction is not None else successor[1]))
-                    visited.append(curState)
+                if curNode != root and minCost > curNode.stepCost + admissibleHeuristic(curState):
+                    minCost = curNode.stepCost + admissibleHeuristic(curState)
+                    bestAction = curAction
+                if not curState.isWin() and not curState.isLose():
+                    legal = curState.getLegalPacmanActions()
+                    successors = [(curState.generatePacmanSuccessor(action), action) for action in legal]
+                    for successor in successors:
+                        if successor[0] is not None and successor[0]:
+                            queue.append((StateNode(successor[0], curNode.stepCost + 1),
+                                          curAction if curAction is not None else successor[1]))
         return bestAction
 
 
@@ -96,22 +93,20 @@ class DFSAgent(Agent):
         stack = [(root, None)]
         minCost = MAX_VALUE
         bestAction = Directions.STOP
-        visited = []
         while len(stack) > 0:
             curNode, curAction = stack.pop()
             curState = curNode.state
-            if curState not in visited:
-                if curNode != root and minCost > curNode.stepCost + admissibleHeuristic(curState):
-                    minCost = curNode.stepCost + admissibleHeuristic(curState)
-                    bestAction = curAction
-                if not curState.isWin() and not curState.isLose():
-                    legal = curState.getLegalPacmanActions()
-                    successors = [(curState.generatePacmanSuccessor(action), action) for action in legal]
-                    for successor in successors:
-                        if successor[0] is not None and successor[0] not in visited:
-                            stack.append((StateNode(successor[0], curNode.stepCost + 1),
-                                          curAction if curAction is not None else successor[1]))
-                visited.append(curState)
+            # if curState not in visited:
+            if curNode != root and minCost > curNode.stepCost + admissibleHeuristic(curState):
+                minCost = curNode.stepCost + admissibleHeuristic(curState)
+                bestAction = curAction
+            if not curState.isWin() and not curState.isLose():
+                legal = curState.getLegalPacmanActions()
+                successors = [(curState.generatePacmanSuccessor(action), action) for action in legal]
+                for successor in successors:
+                    if successor[0] is not None and successor[0]:
+                        stack.append((StateNode(successor[0], curNode.stepCost + 1),
+                                      curAction if curAction is not None else successor[1]))
         return bestAction
 
 
@@ -127,23 +122,20 @@ class AStarAgent(Agent):
         pq.put((admissibleHeuristic(state), root, None))
         minCost = MAX_VALUE
         bestAction = Directions.STOP
-        visited = []
         while pq.size() > 0:
             _, curNode, curAction = pq.get()
             curState = curNode.state
-            if curState not in visited:
-                if curNode != root and minCost > curNode.stepCost + admissibleHeuristic(curState):
-                    minCost = curNode.stepCost + admissibleHeuristic(curState)
-                    bestAction = curAction
-                if not curState.isWin() and not curState.isLose():
-                    legal = curState.getLegalPacmanActions()
-                    successors = [(curState.generatePacmanSuccessor(action), action) for action in legal]
-                    for successor in successors:
-                        if successor[0] is not None and successor[0] not in visited:
-                            pq.put((curNode.stepCost + 1 + admissibleHeuristic(successor[0]),
-                                    StateNode(successor[0], curNode.stepCost + 1),
-                                    curAction if curAction is not None else successor[1]))
-                visited.append(curState)
+            if curNode != root and minCost > curNode.stepCost + admissibleHeuristic(curState):
+                minCost = curNode.stepCost + admissibleHeuristic(curState)
+                bestAction = curAction
+            if not curState.isWin() and not curState.isLose():
+                legal = curState.getLegalPacmanActions()
+                successors = [(curState.generatePacmanSuccessor(action), action) for action in legal]
+                for successor in successors:
+                    if successor[0] is not None and successor[0]:
+                        pq.put((curNode.stepCost + 1 + admissibleHeuristic(successor[0]),
+                                StateNode(successor[0], curNode.stepCost + 1),
+                                curAction if curAction is not None else successor[1]))
         return bestAction
 
 class StateNode:
